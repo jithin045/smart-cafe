@@ -162,10 +162,6 @@ export default function Home() {
 
         </div>
       </main>
-
-      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-white/5 flex justify-center">
-        <p className="text-[9px] font-bold text-gray-700 uppercase tracking-[0.6em]">Smart Café © 2026 / System Active</p>
-      </footer>
     </div>
   );
 }

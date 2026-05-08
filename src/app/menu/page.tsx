@@ -228,6 +228,7 @@ export default function MenuPage() {
           </AnimatePresence>
         </div>
       </main>
+      
 
       {/* 6. INTERACTIVE FLOATING CART BAR */}
       <AnimatePresence>
