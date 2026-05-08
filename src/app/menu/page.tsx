@@ -48,7 +48,7 @@ const BackgroundDecor = () => {
       </motion.div>
 
       {/* Sparkling Particles */}
-      <motion.div 
+      <motion.div
         animate={{ opacity: [0.2, 0.8, 0.2], scale: [1, 1.2, 1] }}
         transition={{ duration: 4, repeat: Infinity }}
         className="absolute top-[20%] right-[30%] text-yellow-500/30"
@@ -116,18 +116,18 @@ export default function MenuPage() {
 
   return (
     <div className="relative min-h-screen bg-[#050505] pb-40 text-foreground overflow-x-hidden">
-      
+
       {/* 1. INTERACTIVE BACKGROUND ELEMENTS */}
       <BackgroundDecor />
-      
+
       {/* Ambient Moving Glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <motion.div 
+        <motion.div
           animate={{ scale: [1, 1.2, 1], opacity: [0.03, 0.07, 0.03] }}
           transition={{ duration: 10, repeat: Infinity }}
           className="absolute -top-[10%] -right-[10%] w-[60%] h-[60%] bg-green-600 rounded-full blur-[150px]"
         />
-        <motion.div 
+        <motion.div
           animate={{ scale: [1.2, 1, 1.2], opacity: [0.02, 0.05, 0.02] }}
           transition={{ duration: 15, repeat: Infinity }}
           className="absolute bottom-0 -left-20 w-[50%] h-[50%] bg-green-900 rounded-full blur-[150px]"
@@ -140,7 +140,7 @@ export default function MenuPage() {
       </div>
 
       <main className="relative z-10 max-w-7xl mx-auto px-6">
-        
+
         {/* 3. HERO SECTION */}
         <motion.section style={{ opacity: heroOpacity, scale: heroScale }} className="py-20">
           <motion.div initial={{ x: -20, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} className="flex items-center gap-3 mb-4">
@@ -153,56 +153,55 @@ export default function MenuPage() {
           </motion.h1>
         </motion.section>
 
-        {/* 4. HIGH-GLOW FLOATING NAV */}
-<nav className="mb-20 sticky top-[80px] z-40 py-8 -mx-6 px-6">
-  {/* Container: More transparent to let the background through */}
-  <div className="max-w-fit mx-auto bg-white/[0.02] backdrop-blur-3xl border border-white/5 p-5 rounded-[5rem] shadow-[0_40px_80px_rgba(0,0,0,0.5)]">
-    
-    {/* Increased Gap between items (gap-8) */}
-    <div className="flex gap-4 md:gap-8 overflow-x-auto no-scrollbar items-center px-4">
-      {categories.map((cat, idx) => (
-        <motion.button
-          key={cat}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: idx * 0.05 }}
-          onClick={() => setSelectedCategory(cat)}
-          className="relative flex items-center gap-5 px-10 py-5 rounded-full transition-all outline-none group min-w-max"
-        >
-          {/* THE GLOW: Enhanced shadow and outer spread */}
-          <AnimatePresence>
-            {selectedCategory === cat && (
-              <motion.div
-                layoutId="active-pill"
-                className="absolute inset-0 bg-green-600 rounded-full z-0 
-                           shadow-[0_0_30px_rgba(21,128,61,0.6),0_20px_40px_rgba(0,0,0,0.4)]
+        {/* 4. MOBILE-FRIENDLY HIGH-GLOW NAV */}
+        <nav className="mb-12 md:mb-20 sticky top-[72px] md:top-[80px] z-40 py-4 md:py-8 -mx-6 px-6">
+          {/* Container: Responsive width and padding */}
+          <div className="max-w-[95vw] md:max-w-fit mx-auto bg-white/[0.02] backdrop-blur-3xl border border-white/5 p-2 md:p-5 rounded-[5rem] shadow-[0_40px_80px_rgba(0,0,0,0.5)] overflow-hidden">
+
+            {/* Scrollable Area: snap-x ensures items stop perfectly when scrolling on mobile */}
+            <div className="flex gap-2 md:gap-8 overflow-x-auto no-scrollbar items-center px-2 md:px-4 snap-x">
+              {categories.map((cat, idx) => (
+                <motion.button
+                  key={cat}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.05 }}
+                  onClick={() => setSelectedCategory(cat)}
+                  className="relative flex items-center gap-3 md:gap-5 px-6 md:px-10 py-3 md:py-5 rounded-full transition-all outline-none group min-w-max snap-center"
+                >
+                  {/* THE GLOW: Responsive shadow spread */}
+                  <AnimatePresence>
+                    {selectedCategory === cat && (
+                      <motion.div
+                        layoutId="active-pill"
+                        className="absolute inset-0 bg-green-600 rounded-full z-0 
+                           shadow-[0_0_20px_rgba(21,128,61,0.5)] md:shadow-[0_0_30px_rgba(21,128,61,0.6),0_20px_40px_rgba(0,0,0,0.4)]
                            border border-white/20"
-                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-              />
-            )}
-          </AnimatePresence>
+                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                      />
+                    )}
+                  </AnimatePresence>
 
-          {/* Icon: More breathing room */}
-          <div className="relative z-10">
-            {cat === "All" && <Sparkles size={22} className={selectedCategory === cat ? "text-white" : "text-gray-600 group-hover:text-gray-300"} />}
-            {cat === "Coffee" && <Coffee size={22} className={selectedCategory === cat ? "text-white" : "text-gray-600 group-hover:text-gray-300"} />}
-            {cat === "Snacks" && <Utensils size={22} className={selectedCategory === cat ? "text-white" : "text-gray-600 group-hover:text-gray-300"} />}
-            {!["All", "Coffee", "Snacks"].includes(cat) && (
-              <Leaf size={22} className={selectedCategory === cat ? "text-white" : "text-gray-600 group-hover:text-gray-300"} />
-            )}
+                  {/* Icon: Scaled down slightly for mobile */}
+                  <div className="relative z-10">
+                    {cat === "All" && <Sparkles size={18} className={`md:w-[22px] md:h-[22px] ${selectedCategory === cat ? "text-white" : "text-gray-600"}`} />}
+                    {cat === "Coffee" && <Coffee size={18} className={`md:w-[22px] md:h-[22px] ${selectedCategory === cat ? "text-white" : "text-gray-600"}`} />}
+                    {cat === "Snacks" && <Utensils size={18} className={`md:w-[22px] md:h-[22px] ${selectedCategory === cat ? "text-white" : "text-gray-600"}`} />}
+                    {!["All", "Coffee", "Snacks"].includes(cat) && (
+                      <Leaf size={18} className={`md:w-[22px] md:h-[22px] ${selectedCategory === cat ? "text-white" : "text-gray-600"}`} />
+                    )}
+                  </div>
+
+                  {/* Label: Fluid text sizing */}
+                  <span className={`relative z-10 text-[10px] md:text-[13px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] transition-colors duration-300 ${selectedCategory === cat ? "text-white" : "text-gray-600"
+                    }`}>
+                    {cat}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
           </div>
-
-          {/* Label: Stronger tracking for a luxury feel */}
-          <span className={`relative z-10 text-[12px] md:text-[13px] font-black uppercase tracking-[0.3em] transition-colors duration-300 ${
-            selectedCategory === cat ? "text-white" : "text-gray-600 group-hover:text-gray-300"
-          }`}>
-            {cat}
-          </span>
-        </motion.button>
-      ))}
-    </div>
-  </div>
-</nav>
+        </nav>
 
         {/* 5. MENU GRID */}
         <div className="mt-8">
@@ -233,19 +232,19 @@ export default function MenuPage() {
       {/* 6. INTERACTIVE FLOATING CART BAR */}
       <AnimatePresence>
         {totalItems > 0 && (
-          <motion.div 
+          <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             className="fixed bottom-8 left-0 right-0 px-4 z-50"
           >
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="max-w-xl mx-auto bg-[#111111]/90 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-3 flex items-center justify-between shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
             >
               <div className="flex items-center gap-5 pl-4">
-                <motion.div 
+                <motion.div
                   key={totalItems}
                   initial={{ scale: 0.5 }}
                   animate={{ scale: 1 }}
@@ -258,8 +257,8 @@ export default function MenuPage() {
                   <p className="text-xl font-black text-white tracking-tighter">₹{totalPrice.toLocaleString()}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setCartOpen(true)} 
+              <button
+                onClick={() => setCartOpen(true)}
                 className="bg-green-700 hover:bg-green-600 text-white px-10 py-4 rounded-[1.8rem] font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl"
               >
                 Review Cart <span>→</span>
