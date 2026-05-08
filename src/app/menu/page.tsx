@@ -153,44 +153,56 @@ export default function MenuPage() {
           </motion.h1>
         </motion.section>
 
-        {/* 4. SWIGGY STYLE NAV */}
-        <nav className="mb-14 sticky top-[72px] z-40 bg-background/95 backdrop-blur-sm py-8 -mx-6 px-6 border-b border-white/5">
-          <div className="flex gap-10 overflow-x-auto no-scrollbar items-center py-2">
-            {categories.map((cat, idx) => (
-              <motion.button
-                key={cat}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                onClick={() => setSelectedCategory(cat)}
-                className="flex flex-col items-center gap-4 min-w-[90px] md:min-w-[110px] group outline-none"
-              >
-                <div className="relative">
-                  <motion.div
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl ${
-                      selectedCategory === cat
-                        ? "bg-green-600 ring-4 ring-green-600 ring-offset-4 ring-offset-[#050505] scale-110 shadow-green-900/40"
-                        : "bg-[#111] border border-white/10 group-hover:border-green-600/50"
-                    }`}
-                  >
-                    <img
-                      src={categoryIcons[cat] || categoryIcons["All"]}
-                      alt={cat}
-                      className={`w-12 h-12 md:w-14 md:h-14 object-contain transition-all duration-500 ${
-                        selectedCategory === cat ? "scale-110 brightness-110" : "scale-100 grayscale group-hover:grayscale-0 opacity-60 group-hover:opacity-100"
-                      }`}
-                    />
-                  </motion.div>
-                </div>
-                <span className={`text-xs md:text-sm font-black uppercase tracking-tighter transition-all duration-300 ${selectedCategory === cat ? "text-green-500 scale-105" : "text-gray-500"}`}>
-                  {cat}
-                </span>
-              </motion.button>
-            ))}
+        {/* 4. HIGH-GLOW FLOATING NAV */}
+<nav className="mb-20 sticky top-[80px] z-40 py-8 -mx-6 px-6">
+  {/* Container: More transparent to let the background through */}
+  <div className="max-w-fit mx-auto bg-white/[0.02] backdrop-blur-3xl border border-white/5 p-5 rounded-[5rem] shadow-[0_40px_80px_rgba(0,0,0,0.5)]">
+    
+    {/* Increased Gap between items (gap-8) */}
+    <div className="flex gap-4 md:gap-8 overflow-x-auto no-scrollbar items-center px-4">
+      {categories.map((cat, idx) => (
+        <motion.button
+          key={cat}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: idx * 0.05 }}
+          onClick={() => setSelectedCategory(cat)}
+          className="relative flex items-center gap-5 px-10 py-5 rounded-full transition-all outline-none group min-w-max"
+        >
+          {/* THE GLOW: Enhanced shadow and outer spread */}
+          <AnimatePresence>
+            {selectedCategory === cat && (
+              <motion.div
+                layoutId="active-pill"
+                className="absolute inset-0 bg-green-600 rounded-full z-0 
+                           shadow-[0_0_30px_rgba(21,128,61,0.6),0_20px_40px_rgba(0,0,0,0.4)]
+                           border border-white/20"
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Icon: More breathing room */}
+          <div className="relative z-10">
+            {cat === "All" && <Sparkles size={22} className={selectedCategory === cat ? "text-white" : "text-gray-600 group-hover:text-gray-300"} />}
+            {cat === "Coffee" && <Coffee size={22} className={selectedCategory === cat ? "text-white" : "text-gray-600 group-hover:text-gray-300"} />}
+            {cat === "Snacks" && <Utensils size={22} className={selectedCategory === cat ? "text-white" : "text-gray-600 group-hover:text-gray-300"} />}
+            {!["All", "Coffee", "Snacks"].includes(cat) && (
+              <Leaf size={22} className={selectedCategory === cat ? "text-white" : "text-gray-600 group-hover:text-gray-300"} />
+            )}
           </div>
-        </nav>
+
+          {/* Label: Stronger tracking for a luxury feel */}
+          <span className={`relative z-10 text-[12px] md:text-[13px] font-black uppercase tracking-[0.3em] transition-colors duration-300 ${
+            selectedCategory === cat ? "text-white" : "text-gray-600 group-hover:text-gray-300"
+          }`}>
+            {cat}
+          </span>
+        </motion.button>
+      ))}
+    </div>
+  </div>
+</nav>
 
         {/* 5. MENU GRID */}
         <div className="mt-8">
