@@ -1,89 +1,90 @@
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.NEXT_PUBLIC_API_URL;
 
-/**
- * 🧾 GET PRODUCTS
- */
+// ============================
+// PRODUCTS
+// ============================
 export const getProducts = async () => {
-  const res = await fetch(
-    `${BASE_URL}/products`
-  );
+  const res = await fetch(`${API}/products`);
 
   if (!res.ok) {
-    throw new Error(
-      "Failed to fetch products"
-    );
+    throw new Error("Failed to fetch products");
   }
 
   return res.json();
 };
 
-/**
- * 🧾 CREATE ORDER
- */
-export const createOrder = async (
-  data: any
-) => {
-  const res = await fetch(
-    `${BASE_URL}/orders`,
-    {
-      method: "POST",
-
-      headers: {
-        "Content-Type":
-          "application/json",
-      },
-
-      body: JSON.stringify(data),
-    }
-  );
+// ============================
+// CREATE ORDER (PUBLIC - CUSTOMER)
+// ============================
+export const createOrder = async (data: any) => {
+  const res = await fetch(`${API}/orders`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 
   const result = await res.json();
 
   if (!res.ok) {
-    throw new Error(
-      result.message ||
-        "Order creation failed"
-    );
+    throw new Error(result.message || "Order creation failed");
   }
 
   return result;
 };
 
-/**
- * 📦 GET ALL ORDERS
- */
-export const getOrders = async () => {
-  const res = await fetch(
-    `${BASE_URL}/orders`
-  );
+// ============================
+// GET ORDERS (STAFF / ADMIN)
+// ============================
+export const getOrders = async (token: string) => {
+  const res = await fetch(`${API}/orders`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   if (!res.ok) {
-    throw new Error(
-      "Failed to fetch orders"
-    );
+    throw new Error("Failed to fetch orders");
   }
 
   return res.json();
 };
 
-/**
- * 🔍 GET ORDER BY ID
- */
-export const getOrderById = async (
-  id: string
+// ============================
+// UPDATE ORDER STATUS (STAFF / KITCHEN)
+// ============================
+export const updateOrderStatus = async (
+  id: string,
+  status: string,
+  token: string
 ) => {
-  const res = await fetch(
-    `${BASE_URL}/orders/${id}`
-  );
+  const res = await fetch(`${API}/orders/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to update order");
+  }
+
+  return res.json();
+};
+
+// ============================
+// GET ORDER BY ID (CUSTOMER TRACKING)
+// ============================
+export const getOrderById = async (id: string) => {
+  const res = await fetch(`${API}/orders/${id}`);
 
   const result = await res.json();
 
   if (!res.ok) {
-    throw new Error(
-      result.message ||
-        "Order not found"
-    );
+    throw new Error(result.message || "Order not found");
   }
 
   return result;

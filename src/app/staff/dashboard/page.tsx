@@ -1,162 +1,248 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
+import { io, Socket } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, List, Clock, Coffee, LogOut, User } from "lucide-react";
+import {
+  Timer,
+  CheckCircle2,
+  Flame,
+  Clock,
+  ChefHat,
+  User,
+  ArrowRight,
+  Loader2,
+  CheckCircle
+} from "lucide-react";
+
+import { getOrders, updateOrderStatus } from "@/services/api";
 
 export default function StaffDashboard() {
-  const router = useRouter();
-  const [viewMode, setViewMode] = useState<"card" | "list">("card");
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  const orders = [
-    { id: "1024", items: ["2x Cappuccino", "1x Croissant"], time: "4m ago", status: "Preparing", note: "Extra Hot" },
-    { id: "1025", items: ["1x Iced Latte", "1x Blueberry Muffin"], time: "2m ago", status: "Queued", note: "" },
-    { id: "1026", items: ["3x Espresso"], time: "1m ago", status: "Preparing", note: "Double shot" },
-  ];
+  const [orders, setOrders] = useState<any[]>([]);
+  const [token, setToken] = useState("");
+  const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const role = localStorage.getItem("role");
-    if (!role) router.push("/login");
-    if (role !== "staff" && role !== "admin") router.push("/unauthorized");
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, [router]);
+    const t = localStorage.getItem("token") || "";
+    setToken(t);
+  }, []);
 
-  // Logout Function
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    router.push("/login");
+  // =========================
+  // LOAD ORDERS (UPDATED FILTER)
+  // =========================
+  const loadOrders = async (authToken: string) => {
+    try {
+      const res = await getOrders(authToken);
+      // 🔥 Include "READY" in the filter so they don't vanish
+      setOrders(
+        res.orders.filter(
+          (o: any) => o.status === "PENDING" || o.status === "PREPARING" || o.status === "READY"
+        )
+      );
+    } catch (err) {
+      console.error("Failed to load orders:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (token) loadOrders(token);
+  }, [token]);
+
+  // =========================
+  // REAL-TIME SOCKET (UPDATED FILTER)
+  // =========================
+  useEffect(() => {
+    if (!socketRef.current) {
+      socketRef.current = io(process.env.NEXT_PUBLIC_API_URL!, {
+        transports: ["websocket"],
+      });
+    }
+
+    const socket = socketRef.current;
+    socket.on("connect", () => socket.emit("join-kitchen"));
+
+    socket.on("new-order", (order) => {
+      setOrders((prev) => [order, ...prev]);
+    });
+
+    socket.on("order-updated", (updatedOrder) => {
+      setOrders((prev) => {
+        // 🔥 Only remove from view if marked as "COMPLETED"
+        if (updatedOrder.status === "COMPLETED") {
+          return prev.filter((o) => o._id !== updatedOrder._id);
+        }
+        return prev.map((o) => (o._id === updatedOrder._id ? updatedOrder : o));
+      });
+    });
+
+    return () => {
+      socket.off("new-order");
+      socket.off("order-updated");
+    };
+  }, []);
+
+  const updateStatus = async (id: string, status: string) => {
+    if (!token) return;
+    setIsUpdating(id);
+    try {
+      await updateOrderStatus(id, status, token);
+      await loadOrders(token);
+    } catch (err) {
+      console.error("Action failed:", err);
+    } finally {
+      setIsUpdating(null);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans">
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] bg-green-900/5 rounded-full blur-[120px]" />
+    <div className="p-4 md:p-8 bg-[#050505] text-gray-100 min-h-screen font-sans selection:bg-emerald-500/30">
+      
+      {/* HEADER */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 border-b border-white/5 pb-8">
+        <div>
+          <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3 italic">
+            <div className="bg-emerald-500 p-2 rounded-lg">
+               <Flame className="text-black" size={28} />
+            </div>
+            KITCHEN<span className="text-emerald-500">TERMINAL</span>
+          </h1>
+          <p className="text-gray-500 font-medium mt-1 flex items-center gap-2 text-sm uppercase tracking-widest">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            System Live • {orders.length} Active Orders
+          </p>
+        </div>
+      </header>
+
+      {/* ORDERS GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <AnimatePresence mode="popLayout">
+          {orders.map((order) => (
+            <motion.div
+              key={order._id}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className={`relative overflow-hidden p-6 rounded-3xl border transition-all duration-500 ${
+                order.status === "READY" 
+                ? "bg-emerald-500/[0.05] border-emerald-500/30 shadow-[0_0_40px_-15px_rgba(16,185,129,0.1)]" 
+                : order.status === "PREPARING"
+                ? "bg-yellow-500/[0.03] border-yellow-500/20"
+                : "bg-white/[0.02] border-white/10"
+              }`}
+            >
+              {/* STATUS BAR */}
+              <div className={`absolute top-0 left-0 w-full h-1 ${
+                order.status === "READY" ? "bg-emerald-500 animate-pulse" : 
+                order.status === "PREPARING" ? "bg-yellow-500" : "bg-white/20"
+              }`} />
+
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className={`text-4xl font-black italic tracking-tighter ${
+                    order.status === "READY" ? "text-emerald-500" : 
+                    order.status === "PREPARING" ? "text-yellow-500" : "text-gray-400"
+                  }`}>
+                    #{order.tokenNumber}
+                  </h2>
+                  <div className="flex items-center gap-2 text-gray-400 mt-1">
+                    <User size={14} />
+                    <span className="text-xs font-bold uppercase tracking-widest truncate max-w-[120px]">
+                      {order.customerName}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-white/5 p-2 rounded-xl border border-white/10">
+                  <Clock size={18} className="text-gray-500" />
+                </div>
+              </div>
+
+              {/* ITEMS LIST */}
+              <div className="space-y-3 mb-8">
+                {order.items.map((item: any, i: number) => (
+                  <div key={i} className="flex justify-between items-center group">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                        order.status === "READY" ? "bg-emerald-500" : "bg-emerald-500/40"
+                      }`} />
+                      <span className="text-sm font-semibold text-gray-300 uppercase italic truncate max-w-[150px]">
+                        {item.name}
+                      </span>
+                    </div>
+                    <span className="bg-white/10 px-3 py-1 rounded-full text-[10px] font-black text-white border border-white/5">
+                      X{item.quantity}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* BUTTON LOGIC */}
+              <div className="flex flex-col gap-2">
+                {order.status === "PENDING" ? (
+                  <button
+                    disabled={isUpdating === order._id}
+                    onClick={() => updateStatus(order._id, "PREPARING")}
+                    className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 group"
+                  >
+                    {isUpdating === order._id ? <Loader2 className="animate-spin" size={20} /> : (
+                      <>
+                        <ChefHat size={20} className="group-hover:rotate-12 transition-transform" />
+                        START PREPARATION
+                      </>
+                    )}
+                  </button>
+                ) : order.status === "PREPARING" ? (
+                  <button
+                    disabled={isUpdating === order._id}
+                    onClick={() => updateStatus(order._id, "READY")}
+                    className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95"
+                  >
+                    {isUpdating === order._id ? <Loader2 className="animate-spin" size={20} /> : (
+                      <>
+                        <CheckCircle2 size={18} />
+                        MARK AS READY
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    disabled={isUpdating === order._id}
+                    onClick={() => updateStatus(order._id, "COMPLETED")}
+                    className="w-full bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 border border-white/10"
+                  >
+                    {isUpdating === order._id ? <Loader2 className="animate-spin" size={20} /> : (
+                      <>
+                        <CheckCircle size={18} className="text-emerald-500" />
+                        ORDER SERVED (DONE)
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
 
-      <nav className="border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-6">
-            <h1 className="text-xl font-black uppercase italic tracking-tighter">
-              Smart <span className="text-green-500">Café</span>
-            </h1>
-            
-            <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-              <button 
-                onClick={() => setViewMode("card")}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${viewMode === "card" ? "bg-green-600 text-black" : "text-gray-400 hover:text-white"}`}
-              >
-                <LayoutGrid size={14} /> Cards
-              </button>
-              <button 
-                onClick={() => setViewMode("list")}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${viewMode === "list" ? "bg-green-600 text-black" : "text-gray-400 hover:text-white"}`}
-              >
-                <List size={14} /> List
-              </button>
-            </div>
+      {/* EMPTY STATE */}
+      {orders.length === 0 && (
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center justify-center h-[50vh] border-2 border-dashed border-white/5 rounded-[40px] mt-4"
+        >
+          <div className="bg-white/5 p-8 rounded-full mb-6">
+            <Timer className="text-gray-700" size={60} strokeWidth={1} />
           </div>
-
-          <div className="flex items-center gap-6">
-            <div className="text-right hidden lg:block">
-              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.3em]">Kitchen Node</p>
-              <p className="text-xs font-mono text-green-500">{currentTime.toLocaleTimeString()}</p>
-            </div>
-
-            {/* Logout Section */}
-            <div className="flex items-center gap-2 pl-6 border-l border-white/10">
-              <button
-                onClick={handleLogout}
-                className="group flex items-center gap-2 px-4 py-2 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/50 rounded-xl transition-all duration-300"
-              >
-                <LogOut size={14} className="text-red-500 group-hover:-translate-x-1 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-red-500">Sign Out</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto p-6">
-        <AnimatePresence mode="wait">
-          {viewMode === "card" ? (
-            <motion.div 
-              key="card"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            >
-              {orders.map((order) => (
-                <div key={order.id} className="bg-white/[0.02] border border-white/10 rounded-2xl overflow-hidden flex flex-col group hover:border-green-500/30 transition-colors">
-                  <div className="p-4 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-green-500">#{order.id}</span>
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <Clock size={12} />
-                      <span className="text-[10px] font-bold">{order.time}</span>
-                    </div>
-                  </div>
-                  <div className="p-5 flex-grow space-y-3">
-                    {order.items.map((item, i) => (
-                      <div key={i} className="flex items-center gap-3 text-sm">
-                        <Coffee size={14} className="text-gray-600" />
-                        <span className="font-medium text-gray-200">{item}</span>
-                      </div>
-                    ))}
-                    {order.note && (
-                      <p className="text-[10px] text-yellow-500/80 italic mt-4 bg-yellow-500/5 p-2 rounded-lg border border-yellow-500/10">
-                        Note: {order.note}
-                      </p>
-                    )}
-                  </div>
-                  <button className="w-full p-4 bg-green-600 hover:bg-green-500 text-black font-black uppercase tracking-[0.2em] text-[10px] transition-all">
-                    Complete Order
-                  </button>
-                </div>
-              ))}
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="list"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="bg-white/[0.02] border border-white/10 rounded-2xl overflow-hidden"
-            >
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-white/10 bg-white/[0.02]">
-                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Order ID</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Items</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Time</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-500 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((order) => (
-                    <tr key={order.id} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
-                      <td className="p-4 font-mono text-green-500 text-sm font-bold">#{order.id}</td>
-                      <td className="p-4">
-                        <p className="text-sm text-gray-300">{order.items.join(", ")}</p>
-                        {order.note && <span className="text-[9px] text-yellow-500 font-bold uppercase tracking-wider">{order.note}</span>}
-                      </td>
-                      <td className="p-4 text-xs text-gray-500 font-bold">{order.time}</td>
-                      <td className="p-4 text-right">
-                        <button className="px-4 py-2 bg-white/5 hover:bg-green-600 hover:text-black border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all">
-                          Done
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
+          <p className="text-gray-500 font-black italic tracking-widest text-xl uppercase">
+            No Active Kitchen Tasks
+          </p>
+        </motion.div>
+      )}
     </div>
   );
 }
