@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { io, Socket } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,16 +10,21 @@ import {
   Clock,
   ChefHat,
   User,
-  ArrowRight,
   Loader2,
-  CheckCircle
+  CheckCircle,
+  LayoutGrid,
+  Zap,
+  PackageCheck
 } from "lucide-react";
 
 import { getOrders, updateOrderStatus } from "@/services/api";
 
+type OrderStatus = "ALL" | "PENDING" | "PREPARING" | "READY";
+
 export default function StaffDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [token, setToken] = useState("");
+  const [filterTab, setFilterTab] = useState<OrderStatus>("ALL");
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -28,13 +33,9 @@ export default function StaffDashboard() {
     setToken(t);
   }, []);
 
-  // =========================
-  // LOAD ORDERS (UPDATED FILTER)
-  // =========================
   const loadOrders = async (authToken: string) => {
     try {
       const res = await getOrders(authToken);
-      // 🔥 Include "READY" in the filter so they don't vanish
       setOrders(
         res.orders.filter(
           (o: any) => o.status === "PENDING" || o.status === "PREPARING" || o.status === "READY"
@@ -49,9 +50,6 @@ export default function StaffDashboard() {
     if (token) loadOrders(token);
   }, [token]);
 
-  // =========================
-  // REAL-TIME SOCKET (UPDATED FILTER)
-  // =========================
   useEffect(() => {
     if (!socketRef.current) {
       socketRef.current = io(process.env.NEXT_PUBLIC_API_URL!, {
@@ -68,7 +66,6 @@ export default function StaffDashboard() {
 
     socket.on("order-updated", (updatedOrder) => {
       setOrders((prev) => {
-        // 🔥 Only remove from view if marked as "COMPLETED"
         if (updatedOrder.status === "COMPLETED") {
           return prev.filter((o) => o._id !== updatedOrder._id);
         }
@@ -95,11 +92,22 @@ export default function StaffDashboard() {
     }
   };
 
+  // 🔥 FILTER LOGIC
+  const filteredOrders = useMemo(() => {
+    if (filterTab === "ALL") return orders;
+    return orders.filter((o) => o.status === filterTab);
+  }, [orders, filterTab]);
+
+  const getCount = (status: OrderStatus) => {
+    if (status === "ALL") return orders.length;
+    return orders.filter((o) => o.status === status).length;
+  };
+
   return (
     <div className="p-4 md:p-8 bg-[#050505] text-gray-100 min-h-screen font-sans selection:bg-emerald-500/30">
       
       {/* HEADER */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 border-b border-white/5 pb-8">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-white/5 pb-8">
         <div>
           <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3 italic">
             <div className="bg-emerald-500 p-2 rounded-lg">
@@ -112,15 +120,50 @@ export default function StaffDashboard() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            System Live • {orders.length} Active Orders
+            Real-time Sync Active
           </p>
+        </div>
+
+        {/* 🔥 STATUS FILTER TABS */}
+        <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 self-stretch md:self-auto">
+          {[
+            { id: "ALL", label: "Queue", icon: LayoutGrid },
+            { id: "PENDING", label: "Pending", icon: Timer },
+            { id: "PREPARING", label: "Cooking", icon: Zap },
+            { id: "READY", label: "Ready", icon: PackageCheck },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setFilterTab(tab.id as OrderStatus)}
+              className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-tighter transition-all duration-300 ${
+                filterTab === tab.id ? "text-black" : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              {filterTab === tab.id && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 bg-emerald-500 rounded-xl"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                <tab.icon size={14} />
+                {tab.label}
+                <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] ${
+                  filterTab === tab.id ? "bg-black/20" : "bg-white/5"
+                }`}>
+                  {getCount(tab.id as OrderStatus)}
+                </span>
+              </span>
+            </button>
+          ))}
         </div>
       </header>
 
       {/* ORDERS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <AnimatePresence mode="popLayout">
-          {orders.map((order) => (
+          {filteredOrders.map((order) => (
             <motion.div
               key={order._id}
               layout
@@ -135,7 +178,6 @@ export default function StaffDashboard() {
                 : "bg-white/[0.02] border-white/10"
               }`}
             >
-              {/* STATUS BAR */}
               <div className={`absolute top-0 left-0 w-full h-1 ${
                 order.status === "READY" ? "bg-emerald-500 animate-pulse" : 
                 order.status === "PREPARING" ? "bg-yellow-500" : "bg-white/20"
@@ -151,7 +193,7 @@ export default function StaffDashboard() {
                   </h2>
                   <div className="flex items-center gap-2 text-gray-400 mt-1">
                     <User size={14} />
-                    <span className="text-xs font-bold uppercase tracking-widest truncate max-w-[120px]">
+                    <span className="text-[10px] font-black uppercase tracking-widest truncate max-w-[120px]">
                       {order.customerName}
                     </span>
                   </div>
@@ -161,7 +203,6 @@ export default function StaffDashboard() {
                 </div>
               </div>
 
-              {/* ITEMS LIST */}
               <div className="space-y-3 mb-8">
                 {order.items.map((item: any, i: number) => (
                   <div key={i} className="flex justify-between items-center group">
@@ -180,7 +221,6 @@ export default function StaffDashboard() {
                 ))}
               </div>
 
-              {/* BUTTON LOGIC */}
               <div className="flex flex-col gap-2">
                 {order.status === "PENDING" ? (
                   <button
@@ -229,17 +269,17 @@ export default function StaffDashboard() {
       </div>
 
       {/* EMPTY STATE */}
-      {orders.length === 0 && (
+      {filteredOrders.length === 0 && (
         <motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }}
           className="flex flex-col items-center justify-center h-[50vh] border-2 border-dashed border-white/5 rounded-[40px] mt-4"
         >
           <div className="bg-white/5 p-8 rounded-full mb-6">
-            <Timer className="text-gray-700" size={60} strokeWidth={1} />
+            <LayoutGrid className="text-gray-700" size={60} strokeWidth={1} />
           </div>
           <p className="text-gray-500 font-black italic tracking-widest text-xl uppercase">
-            No Active Kitchen Tasks
+            No orders in this category
           </p>
         </motion.div>
       )}
