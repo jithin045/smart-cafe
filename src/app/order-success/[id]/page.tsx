@@ -105,7 +105,7 @@ export default function OrderPage() {
         </p>
         <Link
           href="/menu"
-          className="bg-emerald-700 hover:bg-emerald-600 px-6 py-3 rounded-2xl font-bold transition"
+          className="bg-emerald-500 hover:bg-emerald-600 px-6 py-3 rounded-2xl font-bold transition"
         >
           Back to Menu
         </Link>
