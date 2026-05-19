@@ -1,29 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
 import Link from "next/link";
-
 import { useParams } from "next/navigation";
-
-import { io, Socket } from "socket.io-client";
-
 import { getOrderById } from "@/services/api";
-
 import {
   CheckCircle2,
   ArrowLeft,
   Clock3,
   CreditCard,
-  ChefHat,
-  PackageCheck,
-  Timer,
+  Activity,
 } from "lucide-react";
-
 import { motion } from "framer-motion";
-
 import confetti from "canvas-confetti";
-
 import Loading from "@/components/common/Loading";
 
 type OrderItem = {
@@ -43,24 +32,12 @@ type Order = {
 
 export default function OrderPage() {
   const params = useParams();
-
   const id = params?.id as string;
 
-  const [order, setOrder] =
-    useState<Order | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+  const confettiTriggered = useRef(false);
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const socketRef =
-    useRef<Socket | null>(null);
-
-  const readyConfettiTriggered =
-    useRef(false);
-
-  // =========================
-  // LOAD ORDER
-  // =========================
   useEffect(() => {
     if (!id || id === "undefined") {
       setLoading(false);
@@ -69,18 +46,38 @@ export default function OrderPage() {
 
     const loadOrder = async () => {
       try {
-        const data =
-          await getOrderById(id);
-
-        const orderData =
-          data.order || data;
-
+        const data = await getOrderById(id);
+        const orderData = data.order || data;
         setOrder(orderData);
+
+        // 🎉 CONFETTI ONLY ONCE
+        if (!confettiTriggered.current) {
+          confettiTriggered.current = true;
+
+          const duration = 4000;
+          const animationEnd = Date.now() + duration;
+
+          const interval = setInterval(() => {
+            const timeLeft = animationEnd - Date.now();
+
+            if (timeLeft <= 0) {
+              clearInterval(interval);
+              return;
+            }
+
+            confetti({
+              particleCount: 35,
+              spread: 80,
+              origin: {
+                x: Math.random(),
+                y: Math.random() - 0.2,
+              },
+            });
+          }, 250);
+        }
+
       } catch (error) {
-        console.error(
-          "Failed to fetch order:",
-          error
-        );
+        console.error("Failed to fetch order:", error);
       } finally {
         setLoading(false);
       }
@@ -90,60 +87,10 @@ export default function OrderPage() {
   }, [id]);
 
   // =========================
-  // REALTIME SOCKET
-  // =========================
-  useEffect(() => {
-    if (!socketRef.current) {
-      socketRef.current = io(
-        process.env
-          .NEXT_PUBLIC_API_URL!,
-        {
-          transports: ["websocket"],
-        }
-      );
-    }
-
-    const socket = socketRef.current;
-
-    socket.on(
-      "order-updated",
-      (updatedOrder) => {
-        if (
-          updatedOrder._id === id
-        ) {
-          setOrder(updatedOrder);
-
-          // 🎉 Confetti when READY
-          if (
-            updatedOrder.status ===
-              "READY" &&
-            !readyConfettiTriggered.current
-          ) {
-            readyConfettiTriggered.current =
-              true;
-
-            confetti({
-              particleCount: 200,
-              spread: 100,
-              origin: { y: 0.6 },
-            });
-          }
-        }
-      }
-    );
-
-    return () => {
-      socket.off("order-updated");
-    };
-  }, [id]);
-
-  // =========================
   // LOADING
   // =========================
   if (loading) {
-    return (
-      <Loading text="Tracking Order..." />
-    );
+    return <Loading text="Confirming your order..." />;
   }
 
   // =========================
@@ -152,13 +99,13 @@ export default function OrderPage() {
   if (!order) {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4">
-        <h1 className="text-2xl font-black mb-2">
-          Order Not Found
-        </h1>
-
+        <h1 className="text-2xl font-black mb-2 tracking-tight">Order Not Found</h1>
+        <p className="text-gray-500 text-sm mb-6 text-center">
+          We couldn't find this order in our system.
+        </p>
         <Link
           href="/menu"
-          className="bg-green-700 hover:bg-green-600 px-6 py-3 rounded-2xl font-bold transition"
+          className="bg-emerald-700 hover:bg-emerald-600 px-6 py-3 rounded-2xl font-bold transition"
         >
           Back to Menu
         </Link>
@@ -167,248 +114,106 @@ export default function OrderPage() {
   }
 
   // =========================
-  // STATUS CONFIG
+  // SUCCESS PAGE
   // =========================
-  const steps = [
-    "PENDING",
-    "PREPARING",
-    "READY",
-    "COMPLETED",
-  ];
-
-  const currentStep =
-    steps.indexOf(order.status);
-
-  const statusText = {
-    PENDING: "Order Received",
-    PREPARING:
-      "Preparing Your Food",
-    READY: "Ready for Pickup",
-    COMPLETED:
-      "Order Completed",
-  };
-
-  const statusIcon = {
-    PENDING: <Timer size={24} />,
-    PREPARING: (
-      <ChefHat size={24} />
-    ),
-    READY: (
-      <PackageCheck size={24} />
-    ),
-    COMPLETED: (
-      <CheckCircle2 size={24} />
-    ),
-  };
-
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-10">
-
+    <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-4 py-10 font-sans selection:bg-emerald-500/30">
       <motion.div
-        initial={{
-          opacity: 0,
-          y: 30,
-        }}
-        animate={{
-          opacity: 1,
-          y: 0,
-        }}
-        className="
-          w-full
-          max-w-md
-          bg-[#111]
-          border
-          border-white/10
-          rounded-3xl
-          p-8
-          space-y-8
-        "
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="w-full max-w-md bg-[#111] border border-white/10 rounded-3xl p-8 space-y-6 shadow-2xl"
       >
+        {/* SUCCESS ICON */}
+        <div className="text-center">
+          <CheckCircle2
+            className="text-emerald-500 mx-auto mb-4 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+            size={65}
+          />
+          <p className="text-emerald-500 uppercase tracking-[0.3em] text-xs font-bold">
+            Order Confirmed
+          </p>
+          <h1 className="text-3xl font-black mt-2 tracking-tight">Thank You ☕</h1>
+        </div>
 
         {/* TOKEN */}
-        <div className="text-center">
-          <p className="text-xs uppercase tracking-[0.3em] text-gray-500">
-            Live Tracking
+        <div className="bg-black/40 border border-white/10 rounded-2xl p-5 text-center">
+          <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">
+            Your Token Number
           </p>
-
-          <h1 className="text-5xl font-black text-green-500 mt-3">
+          <p className="text-5xl font-black text-emerald-500 tracking-tighter italic">
             #{order.tokenNumber}
-          </h1>
-
-          <p className="mt-3 text-gray-400">
-            Your order is being tracked live
           </p>
         </div>
 
-        {/* STATUS CARD */}
-        <motion.div
-          key={order.status}
-          initial={{
-            scale: 0.95,
-            opacity: 0,
-          }}
-          animate={{
-            scale: 1,
-            opacity: 1,
-          }}
-          className="
-            bg-green-500/10
-            border
-            border-green-500/20
-            rounded-3xl
-            p-6
-            text-center
-          "
-        >
-          <div className="flex justify-center text-green-500 mb-4">
-            {statusIcon[
-              order.status as keyof typeof statusIcon
-            ]}
+        {/* STATUS BRIEF */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-black/30 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-widest">
+              <Clock3 size={14} /> Status
+            </div>
+            <p className="mt-2 font-black text-emerald-500 uppercase tracking-wide">
+              {order.status === "PENDING" ? "Accepted" : order.status === "PREPARING" ? "Preparing" : order.status === "READY" ? "Ready" : "Served"}
+            </p>
           </div>
 
-          <h2 className="text-2xl font-black text-green-500">
-            {
-              statusText[
-                order.status as keyof typeof statusText
-              ]
-            }
-          </h2>
-
-          <p className="text-sm text-gray-400 mt-2">
-            Current Status:
-            {" "}
-            {order.status}
-          </p>
-        </motion.div>
-
-        {/* PROGRESS BAR */}
-        <div className="space-y-4">
-
-          {steps.map(
-            (step, index) => (
-              <div
-                key={step}
-                className="flex items-center gap-4"
-              >
-                <div
-                  className={`
-                    w-5 h-5 rounded-full border-2
-                    ${
-                      index <=
-                      currentStep
-                        ? "bg-green-500 border-green-500"
-                        : "border-gray-600"
-                    }
-                  `}
-                />
-
-                <div>
-                  <p
-                    className={`
-                      text-sm font-bold
-                      ${
-                        index <=
-                        currentStep
-                          ? "text-white"
-                          : "text-gray-500"
-                      }
-                    `}
-                  >
-                    {step}
-                  </p>
-                </div>
-              </div>
-            )
-          )}
+          <div className="bg-black/30 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-widest">
+              <CreditCard size={14} /> Payment
+            </div>
+            <p className="mt-2 font-black text-emerald-500 uppercase tracking-wide">
+              {order.paymentStatus}
+            </p>
+          </div>
         </div>
 
         {/* ITEMS */}
         <div className="space-y-3">
           <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-            Items
+            Your Order
           </p>
-
-          {order.items.map(
-            (item, index) => (
+          <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+            {order.items.map((item, index) => (
               <div
                 key={index}
-                className="
-                  flex
-                  justify-between
-                  items-center
-                  border-b
-                  border-white/5
-                  pb-3
-                "
+                className="flex justify-between items-center border-b border-white/5 pb-3 text-sm"
               >
                 <div>
-                  <p className="font-semibold">
-                    {item.name}
-                  </p>
-
-                  <p className="text-xs text-gray-500">
-                    Qty:
-                    {" "}
-                    {item.quantity}
-                  </p>
+                  <p className="font-semibold text-gray-200">{item.name}</p>
+                  <p className="text-gray-500 text-xs">Qty: {item.quantity}</p>
                 </div>
-
-                <p className="font-bold">
-                  ₹
-                  {item.price *
-                    item.quantity}
-                </p>
+                <p className="font-bold text-gray-300">₹{item.price * item.quantity}</p>
               </div>
-            )
-          )}
-        </div>
-
-        {/* PAYMENT */}
-        <div className="flex justify-between items-center bg-black/40 border border-white/10 rounded-2xl p-4">
-
-          <div className="flex items-center gap-2 text-gray-400">
-            <CreditCard size={16} />
-            Payment
+            ))}
           </div>
-
-          <p className="font-black text-green-500">
-            {order.paymentStatus}
-          </p>
         </div>
 
         {/* TOTAL */}
-        <div className="flex justify-between items-center border-t border-white/10 pt-5">
-
-          <span className="text-lg font-bold">
-            Total
-          </span>
-
-          <span className="text-3xl font-black text-green-500">
+        <div className="flex justify-between items-center pt-2 border-t border-white/10">
+          <span className="text-lg font-bold text-gray-400">Total Bill</span>
+          <span className="text-2xl font-black text-emerald-500">
             ₹{order.totalAmount}
           </span>
         </div>
 
-        {/* BACK */}
-        <Link
-          href="/menu"
-          className="
-            w-full
-            flex
-            items-center
-            justify-center
-            gap-2
-            bg-green-700
-            hover:bg-green-600
-            py-4
-            rounded-2xl
-            font-bold
-            transition
-          "
-        >
-          <ArrowLeft size={18} />
-          Back to Menu
-        </Link>
+        {/* INTERACTIVE NAVIGATION PORTS */}
+        <div className="space-y-3 pt-2">
+          <Link
+            href={`/track/${order._id}`}
+            className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] active:scale-[0.99]"
+          >
+            <Activity size={18} className="animate-pulse" />
+            TRACK YOUR ORDER
+          </Link>
 
+          <Link
+            href="/menu"
+            className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 hover:text-white transition py-4 rounded-2xl font-bold text-sm"
+          >
+            <ArrowLeft size={16} />
+            Back to Menu
+          </Link>
+        </div>
       </motion.div>
     </div>
   );
