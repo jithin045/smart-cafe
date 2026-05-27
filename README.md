@@ -1,43 +1,77 @@
 # ☕ Smart Café Management System
 
-A high-performance, aesthetically driven Full Stack management ecosystem designed for modern café operations. This system features a "Secure Terminal" aesthetic with specialized interfaces for different user roles, moving beyond standard junior-level implementations into mid-level system architecture.
+A full-stack café management system designed to handle real-world café operations including ordering, role-based dashboards, and administrative control.
 
-## 🚀 Key Features
+---
 
-*   **Secure Authentication**: Implements robust Role-Based Access Control (RBAC) for Admin and Staff members.
-*   **Aesthetic Command Center**: A "System Active" themed UI featuring glassmorphism, backdrop blurs, and neon green accents.
-*   **Dual-Mode Kitchen Queue**: Real-time order management with toggleable **Card** and **List** views for staff efficiency.
-*   **Admin Control Panel**: Comprehensive dashboard for revenue tracking, inventory monitoring, and staff oversight.
-*   **Modern UI/UX**: Built with a focus on clean architecture, smooth Framer Motion transitions, and layout.
+# 🚀 Overview
 
-## 🛠️ Tech Stack
+The Smart Café Management System is a role-based web application that streamlines café operations by providing separate interfaces for customers, kitchen staff, and administrators.
 
-*   **Frontend**: Next.js 15+ (Turbopack), TypeScript, Tailwind CSS.
-*   **Backend**: Node.js, Express, Strapi.
-*   **Database**: MongoDB (MERN Stack) with potential for multi-tenant vector logic.
-*   **Animations**: Framer Motion & Typewriter Effect.
-*   **Icons**: Lucide React.
+It focuses on workflow efficiency, order tracking, and centralized management.
 
-## 📦 Getting Started
+---
 
-### 1. Installation
+# 👥 User Roles
+
+## 🧑 Customer
+- Browse menu items
+- Place orders
+- Track order status in real time
+
+## 🍳 Kitchen Staff
+- View incoming orders
+- Update order status (Preparing → Ready)
+- Manage order queue efficiently
+
+## 🧑‍💼 Admin
+- Manage menu items
+- Monitor orders
+- View sales and system activity
+- Oversee staff operations
+
+---
+
+# ⚙️ Key Features
+
+- 🔐 Role-Based Access Control (Customer / Admin / Kitchen Staff)
+- 🧾 Order lifecycle management system
+- 🔄 Real-time order status updates
+- 📊 Admin dashboard for monitoring operations
+- 🍽️ Dual order management views (Card / List)
+- 🎯 Responsive UI designed for fast workflow
+
+---
+
+# 🛠️ Tech Stack
+
+**Frontend:** Next.js 15, TypeScript, Tailwind CSS, Framer Motion  
+**Backend:** Node.js, Express  
+**Database:** MongoDB  
+**UI Libraries:** Lucide React  
+
+---
+
+# 📦 Project Structure
+
+- Customer Interface → Menu browsing & ordering
+- Kitchen Dashboard → Order processing workflow
+- Admin Dashboard → System management & analytics
+
+---
+
+# 🔐 Authentication
+
+- Role-based authentication system
+- Session-based or token-based login (depending on implementation)
+- Protected routes for each role
+
+---
+
+# 🚀 Getting Started
+
 ```bash
-git clone [https://github.com/jithin045/smart-cafe.git](https://github.com/jithin045/smart-cafe.git)
+git clone https://github.com/jithin045/smart-cafe.git
 cd smart-cafe
 npm install
-2. Environment Setup
-Create a .env file in the root directory:
-
-NEXT_PUBLIC_API_URL=your_backend_api_url
-
-3. Run Development Server
-Bash
 npm run dev
-Open http://localhost:3000 to access the terminal.
-
-📁 Project Logic
-Staff Dashboard: Features a high-contrast "Kitchen Node" interface with live order status and automated quantity control logic.
-
-Admin Dashboard: Focused on high-level management and system-wide monitoring.
-
-Security: Client-side role verification and persistent session management via local storage tokens.
